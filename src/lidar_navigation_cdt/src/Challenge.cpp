@@ -207,6 +207,37 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   ////// Put your code here ////////////////////////////////////
 
 
+  // Add carrot layer.
+  outputMap.add("carrots", Matrix::Zero(outputMap.getSize()(0), outputMap.getSize()(1)));
+
+  // Convert to OpenCV image, erode, convert back.
+  cv::Mat originalImage, erodeImage;
+  const float minValue = outputMap.get("traversability_clean").minCoeffOfFinites();
+  const float maxValue = outputMap.get("traversability_clean").maxCoeffOfFinites();
+  GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
+  cv::imwrite( "originalImage.bmp", originalImage );
+  // Specify dilation type.
+  int erosion_size = 1;
+  cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_RECT,
+                                                      cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
+  cv::erode(originalImage, erodeImage, erosion_specs);
+  GridMapCvConverter::addLayerFromImage<unsigned short, 1>(erodeImage, "traversability_clean_dilated", outputMap, minValue, maxValue);
+
+  
+  // We have the eroded image. Now iterate towards the goal.
+
+
+  // Check whether goal is within grid map. If it is, that's the carrot.
+  if ( outputMap.isInside(pos_goal) ){
+    Index pt_index;
+    outputMap.getIndex( pt, pt_index );
+    Position pt_cell;
+    outputMap.getPosition(pt_index, pt_cell);
+    outputMap.at("carrots", pt_index) = 1.0;
+  }
+  // Else, project it somewhere.
+
+
 
 
 
