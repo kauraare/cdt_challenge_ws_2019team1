@@ -74,15 +74,21 @@ FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d curr
 
   Eigen::Vector3d positionErrorRaw = current_pose.translation() - current_goal_.translation();
   Eigen::Vector3d positionError = constrainPosition(positionErrorRaw);
+  //Eigen::Vector2d oldErrorPos(positionError[0], positionError[1]);
+
   double linear_gain_x_ = 1.5;
   double linear_gain_y_ = 1.5;
-  linear_forward_x = linear_gain_x_* tanh(-positionError[0]) * exp(-angular_velocity*angular_velocity/3);
-  linear_forward_y = linear_gain_y_* tanh(-positionError[1]) * exp(-angular_velocity*angular_velocity/3);
-  //linear_forward_x = -positionError[0] * linear_gain_x_; //* tanh(-positionError[0]);
-  //linear_forward_y = -positionError[1] * linear_gain_y_; //* tanh(-positionError[1]);
+
+  //linear_forward_x = linear_gain_x_* tanh(-positionError[0]) * exp(-angular_velocity*angular_velocity/3);
+  //linear_forward_y = linear_gain_y_* tanh(-positionError[1]) * exp(-angular_velocity*angular_velocity/3);
+  linear_forward_x = -positionError[0] * linear_gain_x_; //* tanh(-positionError[0]);
+  linear_forward_y = -positionError[1] * linear_gain_y_; //* tanh(-positionError[1]);
+  Eigen::Vector3d vel(linear_forward_x, linear_forward_y, 0);
+
+  vel = Eigen::AngleAxisd(-current_yaw, Eigen::Vector3d::UnitZ()) * vel;
 
   // set outputs
-  output_linear_velocity_ = Eigen::Vector3d(linear_forward_x, linear_forward_y, 0);
+  output_linear_velocity_ = Eigen::Vector3d(vel[0], vel[1], 0);
   output_angular_velocity_ = Eigen::Vector3d(0,0, angular_velocity) ;
   return SEND_COMMAND;
 }

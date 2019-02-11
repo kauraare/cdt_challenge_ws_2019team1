@@ -8,6 +8,7 @@
 
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
+#include <Eigen/Geometry>
 
 enum FOLLOWER_OUTPUT {SEND_NOTHING=0, SEND_STOP_WALKING=1, SEND_COMMAND=2};
 
