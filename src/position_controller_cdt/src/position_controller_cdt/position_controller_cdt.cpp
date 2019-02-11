@@ -62,8 +62,8 @@ FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d curr
   Eigen::Vector3d positionError = constrain_pos(positionErrorRaw);
   double linear_gain_x_ = 4.2;
   double linear_gain_y_ = 1.2;
-  double linear_forward_x = -positionError[0] * linear_gain_x_;
-  double linear_forward_y = -positionError[0] * linear_gain_x_;
+  linear_forward_x = -positionError[0] * linear_gain_x_;
+  linear_forward_y = -positionError[0] * linear_gain_x_;
 
   // set outputs
   output_linear_velocity_ = Eigen::Vector3d(linear_forward_x, linear_forward_y, 0);
