@@ -167,20 +167,22 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 
 float scanForObstacle(Position start, float orientation, float angle, GridMap map, float &x, float &y) {
 
-  float distance = 20;
-  float threshold = 0.5;
+  float distance = 10;
+  float threshold = 0.7;
  
-  float theta = orientation+angle;
+  float theta = (orientation+angle)/180.*PI;
   Position direction(distance*cos(theta), distance*sin(theta));
- 
-  for (grid_map::LineIterator iterator(map, start, direction); !iterator.isPastEnd(); ++iterator) {
+
+  Position start_direction(.6*cos(theta), .6*sin(theta));
+  
+  for (grid_map::LineIterator iterator(map, start_direction, direction); !iterator.isPastEnd(); ++iterator) {
     Position position;
-    map.getPosition(*iterator, position);
-    //std::cout << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
+    map.getPosition(*iterator, position);    
     float val = map.at("traversability_clean_dilated", *iterator);
+    x = position.x();
+    y = position.y();
     if (val < threshold) {
-      x = position.x();
-      y = position.y();
+      std::cout << start_direction.x() << " " << start_direction.y() << " " << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
       return (position - start).norm();
     }
   }  
@@ -362,23 +364,28 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   quat_to_euler(q, robot_roll, robot_pitch, robot_yaw);
 
   // rotates counter-clockwise the pose_robot
-  int N = 21;
+  int N = 100;
   float max_distance = 0;
   float max_x, max_y;
+  int k = 0;
   for (int i=0; i<N; i++) {
-    float angle = 180/2-i*180/N - 90/N;
+    float angle = 10;//i-N/2.0;
     float x, y;
-    float res = scanForObstacle(pos_robot, robot_yaw, angle, outputMap, x, y);
+    float res = scanForObstacle(pos_robot, robot_yaw, -angle, outputMap, x, y);
     if (res > max_distance) {
-      //std::cout << angle << " " << res << " " << x << " " << y << std::endl;
+      std::cout << angle << " " << res << " " << x << " " << y << std::endl;
       max_x = x;
       max_y = y;
       max_distance = res;
     }
+
+    break;
   }
 
+  std::cout << "DISTANCE " << max_distance << std::endl;
+
   std::cout << "REPLACE FAKE CARROT!\n";
-  pose_chosen_carrot.translation() = Eigen::Vector3d(max_x, max_y, 0);
+  pose_chosen_carrot.translation() = Eigen::Vector3d(pos_robot.x(), pos_robot.y(), 0);
 
 
   Eigen::Quaterniond motion_R = Eigen::AngleAxisd(1.0, Eigen::Vector3d::UnitZ()) // yaw
