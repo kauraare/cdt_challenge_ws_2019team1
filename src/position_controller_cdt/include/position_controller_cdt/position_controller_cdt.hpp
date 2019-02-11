@@ -35,6 +35,7 @@ class PositionController{
 
     void quat_to_euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw);
     double constrainAngle(double x);
+    Eigen::Vector3d constrainPosition(Eigen::Vector3d pos); 
 
   private:
     // variables:

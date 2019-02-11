@@ -24,6 +24,9 @@ double PositionController::constrainAngle(double x){
     return x - M_PI;
 }
 
+double PositionController::constrainPosition(Eigen::Vector3d pos){
+    return pos; 
+}
 
 FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d current_pose, int64_t current_utime){
   double linear_forward_x = 0;
@@ -46,7 +49,7 @@ FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d curr
   // compute the P control output:
   double headingErrorRaw = current_yaw - goal_yaw;
   double headingError = constrainAngle(headingErrorRaw);
-  double angular_gain_p_ = 10;
+  double angular_gain_p_ = 10; # TODO find a better parameter manually
   angular_velocity = -headingError * angular_gain_p_;
 
   std::cout << "current_yaw: " << current_yaw << ", raw error: " << headingErrorRaw
@@ -54,6 +57,13 @@ FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d curr
 
   ///////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////
+
+  Eigen::Vector3d positionErrorRaw = curr_pos - goal_pos;
+  Eigen::Vector3d positionError = constrain_pos(positionErrorRaw);
+  double linear_gain_x_ = 4.2;
+  double linear_gain_y_ = 1.2;
+  double linear_forward_x = -positionError[0] * linear_gain_x_;
+  double linear_forward_y = -positionError[0] * linear_gain_x_;
 
   // set outputs
   output_linear_velocity_ = Eigen::Vector3d(linear_forward_x, linear_forward_y, 0);
