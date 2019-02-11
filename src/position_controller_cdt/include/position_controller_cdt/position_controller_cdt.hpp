@@ -4,6 +4,7 @@
 #include <fstream>      // std::ifstream
 #include <stdio.h>
 #include <deque>
+#include <math.h>
 
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
