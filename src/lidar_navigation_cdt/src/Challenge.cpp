@@ -236,6 +236,15 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
 // We have the eroded image. Now go towards the goal.
 
+  // check between here and the goal
+  std::cout << "Robot " << pos_robot << std::endl;
+  std::cout << "Robot " << pos_goal << std::endl;
+  for (grid_map::LineIterator iterator(outputMap, pos_robot, Position(2.0, 2.0)); !iterator.isPastEnd(); ++iterator) {
+    Position position;
+    outputMap.getPosition(*iterator, position);
+    std::cout << position.x() << " " << position.y() << " : " << outputMap.at("traversability_clean_dilated", *iterator) << std::endl;
+  }
+
 /*
   Position difference = pos_goal - pos_robot;
   double difference_value = difference.norm();
@@ -300,7 +309,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   // REMOVE THIS WHEN YOUR ARE DEVELOPING ----------------
   // create a fake carrot - replace with a good carrot
   std::cout << "REPLACE FAKE CARROT!\n";
-  pose_chosen_carrot.translation() = Eigen::Vector3d(1.0,0,0);
+  pose_chosen_carrot.translation() = Eigen::Vector3d(0.1, 0, 0);
 
 /*
   Eigen::Quaterniond motion_R = Eigen::AngleAxisd(20/180.0*PI, Eigen::Vector3d::UnitZ()) // yaw
