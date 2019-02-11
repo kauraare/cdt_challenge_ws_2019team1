@@ -25,8 +25,21 @@ double PositionController::constrainAngle(double x){
 }
 
 Eigen::Vector3d PositionController::constrainPosition(Eigen::Vector3d pos){
+    //we need more copypaste here, I believe
     double threshold = 2.0;
-    return pos.unaryExp([threshold](double x) -> double {return (x > threshold) ? threshold: x; }); 
+    if(pos[0] > threshold) {
+	pos[0] = threshold;
+    }
+    if(pos[1] > threshold) {
+	pos[1] = threshold;
+    }
+    if(pos[0] < -threshold) {
+	pos[0] = -threshold;
+    }
+    if(pos[1] < -threshold) {
+	pos[1] = -threshold;
+    }
+    return pos;
 }
 
 FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d current_pose, int64_t current_utime){
@@ -64,7 +77,7 @@ FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d curr
   double linear_gain_x_ = 2.2;
   double linear_gain_y_ = 1.2;
   linear_forward_x = -positionError[0] * linear_gain_x_;
-  linear_forward_y = -positionError[0] * linear_gain_x_;
+  linear_forward_y = -positionError[1] * linear_gain_y_;
 
   // set outputs
   output_linear_velocity_ = Eigen::Vector3d(linear_forward_x, linear_forward_y, 0);
