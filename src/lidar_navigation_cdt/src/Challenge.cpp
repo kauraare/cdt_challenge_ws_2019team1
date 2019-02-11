@@ -165,27 +165,25 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 
 }
 
-float scanForObstacle(Position start, float orientation, float angle, GridMap map) {
+float scanForObstacle(Position start, float orientation, float angle, GridMap map, float &x, float &y) {
 
-  double distance = 5;
-  
-
-  Eigen::Isometry3d direction = Eigen::Isometry3d::Identity();
-  //end.translation() *= distance;
-  direction.setIdentity();
-  direction.translation() = Eigen::Vector3d(distance, distance, 0);
-  direction.rotate(Eigen::AngleAxisd(orientation+angle, Eigen::Vector3d::UnitZ()) // yaw
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()));
-  std::cout << "V" << direction.translation() << "D" << std::endl;
-  /*
-  for (grid_map::LineIterator iterator(map, start, direction.translation()); !iterator.isPastEnd(); ++iterator) {
+  float distance = 20;
+  float threshold = 0.5;
+ 
+  float theta = orientation+angle;
+  Position direction(distance*cos(theta), distance*sin(theta));
+ 
+  for (grid_map::LineIterator iterator(map, start, direction); !iterator.isPastEnd(); ++iterator) {
     Position position;
     map.getPosition(*iterator, position);
-    std::cout << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
-  }*/
-
-  return 0.0;
+    //std::cout << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
+    float val = map.at("traversability_clean_dilated", *iterator);
+    if (val < threshold) {
+      x = position.x();
+      y = position.y();
+      return (position - start).norm();
+    }
+  }  
 }
 
 bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
@@ -279,7 +277,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   for (grid_map::LineIterator iterator(outputMap, pos_robot, Position(2.0, 2.0)); !iterator.isPastEnd(); ++iterator) {
     Position position;
     outputMap.getPosition(*iterator, position);
-    std::cout << position.x() << " " << position.y() << " : " << outputMap.at("traversability_clean_dilated", *iterator) << std::endl;
+    //std::cout << position.x() << " " << position.y() << " : " << outputMap.at("traversability_clean_dilated", *iterator) << std::endl;
   }
 
 /*
@@ -346,14 +344,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
   // REMOVE THIS WHEN YOUR ARE DEVELOPING ----------------
   // create a fake carrot - replace with a good carrot
-  std::cout << "REPLACE FAKE CARROT!\n";
-  pose_chosen_carrot.translation() = Eigen::Vector3d(1.0, 0, 0);
-
-
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(1.0, Eigen::Vector3d::UnitZ()) // yaw
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
-
+  
 /*
   Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
     double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
@@ -371,13 +362,29 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   quat_to_euler(q, robot_roll, robot_pitch, robot_yaw);
 
   // rotates counter-clockwise the pose_robot
-  int N = 5;
+  int N = 21;
+  float max_distance = 0;
+  float max_x, max_y;
   for (int i=0; i<N; i++) {
     float angle = 180/2-i*180/N - 90/N;
-
-    float res = scanForObstacle(pos_robot, robot_yaw, angle, outputMap);
-    std::cout << angle << " " << res << std::endl;
+    float x, y;
+    float res = scanForObstacle(pos_robot, robot_yaw, angle, outputMap, x, y);
+    if (res > max_distance) {
+      //std::cout << angle << " " << res << " " << x << " " << y << std::endl;
+      max_x = x;
+      max_y = y;
+      max_distance = res;
+    }
   }
+
+  std::cout << "REPLACE FAKE CARROT!\n";
+  pose_chosen_carrot.translation() = Eigen::Vector3d(max_x, max_y, 0);
+
+
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(1.0, Eigen::Vector3d::UnitZ()) // yaw
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
+
 
   pose_chosen_carrot.rotate(Eigen::AngleAxisd(robot_yaw - 20/180.*PI, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
