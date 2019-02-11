@@ -60,7 +60,7 @@ FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d curr
 
   Eigen::Vector3d positionErrorRaw = current_pose.translation() - current_goal_.translation();
   Eigen::Vector3d positionError = constrainPosition(positionErrorRaw);
-  double linear_gain_x_ = 4.2;
+  double linear_gain_x_ = 2.2;
   double linear_gain_y_ = 1.2;
   linear_forward_x = -positionError[0] * linear_gain_x_;
   linear_forward_y = -positionError[0] * linear_gain_x_;
