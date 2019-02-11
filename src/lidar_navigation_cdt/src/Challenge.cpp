@@ -10,7 +10,8 @@
 #include "grid_map_cdt/Challenge.hpp"
 #include <tf_conversions/tf_eigen.h>
 #include <grid_map_cv/grid_map_cv.hpp>
-
+#include <Eigen/Dense>
+#include <Eigen/StdVector>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <cv.h>
 #include <highgui.h>
@@ -30,6 +31,17 @@ using namespace std::chrono;
 
 namespace grid_map_demos {
 
+
+void quat_to_euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw) {
+  const double q0 = q.w();
+  const double q1 = q.x();
+  const double q2 = q.y();
+  const double q3 = q.z();
+  roll = atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2));
+  pitch = asin(2*(q0*q2-q3*q1));
+  yaw = atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3));
+}
+
 NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
     : nodeHandle_(nodeHandle),
       filterChain_("grid_map::GridMap"),
@@ -45,6 +57,9 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
 
   outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 1, true);
   footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
+
+  raysPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/rays", 10);
+
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
 
   // Setup filter chain.
@@ -83,7 +98,6 @@ bool NavigationDemo::readParameters()
 
   return true;
 }
-
 
 void NavigationDemo::tic(){
   lastTime_ = high_resolution_clock::now();
@@ -149,6 +163,29 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
     footstepPlanRequestPub_.publish(m);
   }
 
+}
+
+float scanForObstacle(Position start, float orientation, float angle, GridMap map) {
+
+  double distance = 5;
+  
+
+  Eigen::Isometry3d direction = Eigen::Isometry3d::Identity();
+  //end.translation() *= distance;
+  direction.setIdentity();
+  direction.translation() = Eigen::Vector3d(distance, distance, 0);
+  direction.rotate(Eigen::AngleAxisd(orientation+angle, Eigen::Vector3d::UnitZ()) // yaw
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()));
+  std::cout << "V" << direction.translation() << "D" << std::endl;
+  /*
+  for (grid_map::LineIterator iterator(map, start, direction.translation()); !iterator.isPastEnd(); ++iterator) {
+    Position position;
+    map.getPosition(*iterator, position);
+    std::cout << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
+  }*/
+
+  return 0.0;
 }
 
 bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
@@ -296,6 +333,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   ////// Put your code here ////////////////////////////////////
 
 
+
   // Publish filtered output grid map.
   grid_map_msgs::GridMap outputMessage;
   GridMapRosConverter::toMessage(outputMap, outputMessage);
@@ -309,13 +347,14 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   // REMOVE THIS WHEN YOUR ARE DEVELOPING ----------------
   // create a fake carrot - replace with a good carrot
   std::cout << "REPLACE FAKE CARROT!\n";
-  pose_chosen_carrot.translation() = Eigen::Vector3d(0.1, 0, 0);
+  pose_chosen_carrot.translation() = Eigen::Vector3d(1.0, 0, 0);
 
-/*
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(20/180.0*PI, Eigen::Vector3d::UnitZ()) // yaw
+
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(1.0, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
-*/
+
+/*
   Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
     double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
     if (verbose_) std::cout << carrot_relative_pose.transpose() << " - relative carrot\n";
@@ -324,8 +363,27 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
-  pose_chosen_carrot.rotate( motion_R );
+  
+*/
 
+  Eigen::Quaterniond q(pose_robot.rotation());
+  double robot_roll, robot_pitch, robot_yaw;
+  quat_to_euler(q, robot_roll, robot_pitch, robot_yaw);
+
+  // rotates counter-clockwise the pose_robot
+  int N = 5;
+  for (int i=0; i<N; i++) {
+    float angle = 180/2-i*180/N - 90/N;
+
+    float res = scanForObstacle(pos_robot, robot_yaw, angle, outputMap);
+    std::cout << angle << " " << res << std::endl;
+  }
+
+  pose_chosen_carrot.rotate(Eigen::AngleAxisd(robot_yaw - 20/180.*PI, Eigen::Vector3d::UnitZ()) // yaw
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX())
+  );
+  
   // REMOVE THIS -----------------------------------------
 
   return true;
