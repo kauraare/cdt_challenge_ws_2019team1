@@ -216,14 +216,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
   // clean traversability_clean around robot
   for (grid_map::CircleIterator iterator(outputMap, pos_robot, 0.9); !iterator.isPastEnd(); ++iterator) {
-    std::cout << "The value at index " << (*iterator).transpose() << " is " << outputMap.at("traversability_clean", *iterator) << std::endl;
     outputMap.at("traversability_clean", *iterator) = 1.0f;
-  }
-
-  for (grid_map::GridMapIterator iterator(outputMap); !iterator.isPastEnd(); ++iterator) {
-    if (outputMap.at("traversability_clean", *iterator) > 0.8) {
-      outputMap.at("traversability_clean", *iterator) = 1.0f;
-    }    
   }
 
   // Convert to OpenCV image, erode, convert back.
@@ -232,16 +225,16 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
-  int erosion_size = 15;
+  int erosion_size = 10;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
+  
   cv::erode(originalImage, erodeImage, erosion_specs);
-  //cv::threshold(erodeImage, thresholdedImage, 0., 1.0, cv::THRESH_BINARY);  
+  //cv::threshold(erodeImage, thresholdedImage, 0.99, 1.0, cv::THRESH_BINARY);  
 
   GridMapCvConverter::addLayerFromImage<unsigned short, 1>(erodeImage, "traversability_clean_dilated", outputMap, minValue, maxValue);
 
-
-  // We have the eroded image. Now go towards the goal.
+// We have the eroded image. Now go towards the goal.
 
 /*
   Position difference = pos_goal - pos_robot;
@@ -309,7 +302,16 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   std::cout << "REPLACE FAKE CARROT!\n";
   pose_chosen_carrot.translation() = Eigen::Vector3d(1.0,0,0);
 
+/*
   Eigen::Quaterniond motion_R = Eigen::AngleAxisd(20/180.0*PI, Eigen::Vector3d::UnitZ()) // yaw
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
+*/
+  Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
+    double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
+    if (verbose_) std::cout << carrot_relative_pose.transpose() << " - relative carrot\n";
+    if (verbose_) std::cout << carrot_relative_theta << " - relative carrot - theta\n";
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(carrot_relative_theta, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
