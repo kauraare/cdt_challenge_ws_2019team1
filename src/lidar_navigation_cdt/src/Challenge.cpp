@@ -22,6 +22,8 @@
 
 #include <eigen_conversions/eigen_msg.h>
 
+#define PI 22.0/7.0
+
 using namespace grid_map;
 using namespace std::chrono;
 
@@ -206,14 +208,27 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
   ////// Put your code here ////////////////////////////////////
 
+  const float minValue = outputMap.get("traversability_clean").minCoeffOfFinites();
+  const float maxValue = outputMap.get("traversability_clean").maxCoeffOfFinites();
 
   // Add carrot layer.
   outputMap.add("carrots", Matrix::Zero(outputMap.getSize()(0), outputMap.getSize()(1)));
 
+  // clean traversability_clean around robot
+  for (grid_map::CircleIterator iterator(outputMap, pos_robot, 0.9); !iterator.isPastEnd(); ++iterator) {
+    std::cout << "The value at index " << (*iterator).transpose() << " is " << outputMap.at("traversability_clean", *iterator) << std::endl;
+    outputMap.at("traversability_clean", *iterator) = 1.0f;
+  }
+
+  for (grid_map::GridMapIterator iterator(outputMap); !iterator.isPastEnd(); ++iterator) {
+    if (outputMap.at("traversability_clean", *iterator) > 0.8) {
+      outputMap.at("traversability_clean", *iterator) = 1.0f;
+    }    
+  }
+
   // Convert to OpenCV image, erode, convert back.
-  cv::Mat originalImage, erodeImage;
-  const float minValue = outputMap.get("traversability_clean").minCoeffOfFinites();
-  const float maxValue = outputMap.get("traversability_clean").maxCoeffOfFinites();
+  cv::Mat originalImage, erodeImage, thresholdedImage;
+  
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
@@ -221,12 +236,14 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
   cv::erode(originalImage, erodeImage, erosion_specs);
+  //cv::threshold(erodeImage, thresholdedImage, 0., 1.0, cv::THRESH_BINARY);  
+
   GridMapCvConverter::addLayerFromImage<unsigned short, 1>(erodeImage, "traversability_clean_dilated", outputMap, minValue, maxValue);
 
 
   // We have the eroded image. Now go towards the goal.
 
-
+/*
   Position difference = pos_goal - pos_robot;
   double difference_value = difference.norm();
   Index pt_index;
@@ -260,7 +277,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
       }
     }
   }
-
+*/
 
   /*
   // Else, project it somewhere.
@@ -272,19 +289,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   }*/
 
 
-  outputMap.at("carrots", pt_index) = 1.0;
-
-
-
-
-
-
-
-
-
-
-
-
+  //outputMap.at("carrots", pt_index) = 1.0;
 
   ////// Put your code here ////////////////////////////////////
 
@@ -303,6 +308,13 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   // create a fake carrot - replace with a good carrot
   std::cout << "REPLACE FAKE CARROT!\n";
   pose_chosen_carrot.translation() = Eigen::Vector3d(1.0,0,0);
+
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(20/180.0*PI, Eigen::Vector3d::UnitZ()) // yaw
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
+
+  pose_chosen_carrot.rotate( motion_R );
+
   // REMOVE THIS -----------------------------------------
 
   return true;
