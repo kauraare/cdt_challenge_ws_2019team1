@@ -215,7 +215,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   const float minValue = outputMap.get("traversability_clean").minCoeffOfFinites();
   const float maxValue = outputMap.get("traversability_clean").maxCoeffOfFinites();
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
-  cv::imwrite( "originalImage.bmp", originalImage );
+  //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
   int erosion_size = 15;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
@@ -236,7 +236,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     // TODO: this is assuming that the number is in meters.
     if (difference_value < 1) {
       // If we're close to the goal, set the carrot there.
-      outputMap.getIndex( pt, pt_index );
+      outputMap.getIndex(pos_goal, pt_index );
       Position pt_cell;
       outputMap.getPosition(pt_index, pt_cell);
       outputMap.at("carrots", pt_index) = 1.0;
@@ -252,12 +252,13 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
       // TODO: this is assuming that the number is in meters.
       if (difference_value < 1) {
         // If we're close to the goal, set the carrot there.
-        outputMap.getIndex( pt, pt_index );
+        outputMap.getIndex(pos_goal, pt_index );
         Position pt_cell;
         outputMap.getPosition(pt_index, pt_cell);
         outputMap.at("carrots", pt_index) = 1.0;
         placed_carrot = true;
       }
+    }
   }
 
 
