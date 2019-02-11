@@ -217,25 +217,61 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
-  int erosion_size = 1;
-  cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_RECT,
+  int erosion_size = 15;
+  cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
   cv::erode(originalImage, erodeImage, erosion_specs);
   GridMapCvConverter::addLayerFromImage<unsigned short, 1>(erodeImage, "traversability_clean_dilated", outputMap, minValue, maxValue);
 
-  
-  // We have the eroded image. Now iterate towards the goal.
+
+  // We have the eroded image. Now go towards the goal.
 
 
-  // Check whether goal is within grid map. If it is, that's the carrot.
+  Position difference = pos_goal - pos_robot;
+  double difference_value = difference.norm();
+  Index pt_index;
+  bool placed_carrot = false;
+  // Check whether goal is within grid map.
   if ( outputMap.isInside(pos_goal) ){
-    Index pt_index;
-    outputMap.getIndex( pt, pt_index );
-    Position pt_cell;
-    outputMap.getPosition(pt_index, pt_cell);
-    outputMap.at("carrots", pt_index) = 1.0;
+    // TODO: this is assuming that the number is in meters.
+    if (difference_value < 1) {
+      // If we're close to the goal, set the carrot there.
+      outputMap.getIndex( pt, pt_index );
+      Position pt_cell;
+      outputMap.getPosition(pt_index, pt_cell);
+      outputMap.at("carrots", pt_index) = 1.0;
+      placed_carrot = true;
+    }
   }
+
+  if (!placed_carrot) {
+    Position optimistic_carrot;
+    optimistic_carrot = pos_robot + difference/difference_value;
+
+    if ( outputMap.isInside(pos_goal) ){
+      // TODO: this is assuming that the number is in meters.
+      if (difference_value < 1) {
+        // If we're close to the goal, set the carrot there.
+        outputMap.getIndex( pt, pt_index );
+        Position pt_cell;
+        outputMap.getPosition(pt_index, pt_cell);
+        outputMap.at("carrots", pt_index) = 1.0;
+        placed_carrot = true;
+      }
+  }
+
+
+  /*
   // Else, project it somewhere.
+  {
+    Position difference = pos_goal - pos_robot;
+    double difference_value = difference.norm();
+    double alpha = 0.1;
+    for(int counter = 0; counter < difference_value/alpha; counter++) {;}
+  }*/
+
+
+  outputMap.at("carrots", pt_index) = 1.0;
 
 
 
