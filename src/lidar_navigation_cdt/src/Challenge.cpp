@@ -385,19 +385,28 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   std::cout << "DISTANCE " << max_distance << std::endl;
 
   std::cout << "REPLACE FAKE CARROT!\n";
-  pose_chosen_carrot.translation() = Eigen::Vector3d(pos_robot.x(), pos_robot.y(), 0);
+  pose_chosen_carrot.translation() = Eigen::Vector3d(max_x, max_y, 0);
 
+/*
 
   Eigen::Quaterniond motion_R = Eigen::AngleAxisd(1.0, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
-
   pose_chosen_carrot.rotate(Eigen::AngleAxisd(robot_yaw - 20/180.*PI, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX())
   );
-  
+  */
+
+  Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
+    double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
+    if (verbose_) std::cout << carrot_relative_pose.transpose() << " - relative carrot\n";
+    if (verbose_) std::cout << carrot_relative_theta << " - relative carrot - theta\n";
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(carrot_relative_theta, Eigen::Vector3d::UnitZ()) // yaw
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
+        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
+
   // REMOVE THIS -----------------------------------------
 
   return true;
