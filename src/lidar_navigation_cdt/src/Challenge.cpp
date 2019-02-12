@@ -190,16 +190,6 @@ float scanForObstacle(Position robot, float orientation, float angle, GridMap ma
   }
 }
 
-Eigen::Isometry3d createVector(Position origin, float theta, float magnitude) {
-  Eigen::Isometry3d ve = Eigen::Isometry3d::Identity();
-  pose_chosen_carrot_relative.translation() = Eigen::Vector3d( carrot_relative_pose(0),carrot_relative_pose(1),0);
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(carrot_relative_theta, Eigen::Vector3d::UnitZ()) // yaw
-      * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-      * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
-
-  return ve;
-}
-
 bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   Eigen::Isometry3d pose_robot, Position pos_goal,
   Eigen::Isometry3d& pose_chosen_carrot)
@@ -393,7 +383,6 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     }
   }
 
-  pose_chosen_carrot.translation() = Eigen::Vector3d(max_x, max_y, 0);
 /*
   geometry_msgs::PoseStamped m1, m2;
   float theta1 = robot_yaw+(-N/2.0)*PI/180.0;
@@ -434,7 +423,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
   pose_chosen_carrot.rotate(motion_R);
-
+  pose_chosen_carrot.translation() = Eigen::Vector3d(max_x, max_y, 0);
   // REMOVE THIS -----------------------------------------
 
   return true;
