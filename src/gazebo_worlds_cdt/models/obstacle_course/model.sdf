@@ -4,7 +4,27 @@
     <pose>0 0 0 0 0 0</pose>
     <static>true</static>
     <link name="cylinder06">
-      <pose>3 0.5 0.736 0.0 -0.0 0.0</pose>
+      <pose>3 0.6 0.736 0.0 -0.0 0.0</pose>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.0500</radius>
+            <length>1.4800</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.0500</radius>
+            <length>1.4800</length>
+          </cylinder>
+        </geometry>
+        <material/>
+      </visual>
+    </link>
+    <link name="cylinder03">
+      <pose>3 -0.6 0.736 0.0 -0.0 0.0</pose>
       <collision name="collision">
         <geometry>
           <cylinder>
@@ -24,7 +44,7 @@
       </visual>
     </link>
     <link name="cylinder09">
-      <pose>4.5 0 0.736 0.0 -0.0 0.0</pose>
+      <pose>4.5 -0.25 0.736 0.0 -0.0 0.0</pose>
       <collision name="collision">
         <geometry>
           <cylinder>
@@ -45,26 +65,6 @@
     </link>
     <link name="cylinder01">
       <pose>1.5 0.7 0.736 0.0 -0.0 0.0</pose>
-      <collision name="collision">
-        <geometry>
-          <cylinder>
-            <radius>0.0500</radius>
-            <length>1.4800</length>
-          </cylinder>
-        </geometry>
-      </collision>
-      <visual name="visual">
-        <geometry>
-          <cylinder>
-            <radius>0.0500</radius>
-            <length>1.4800</length>
-          </cylinder>
-        </geometry>
-        <material/>
-      </visual>
-    </link>
-    <link name="cylinder03">
-      <pose>3 -0.5 0.736 0.0 -0.0 0.0</pose>
       <collision name="collision">
         <geometry>
           <cylinder>
