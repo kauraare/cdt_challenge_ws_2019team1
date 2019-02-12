@@ -57,7 +57,6 @@ class NavigationDemo
    */
   void callback(const grid_map_msgs::GridMap& message);
 
-
   // true - planning is good. send carrot.
   // false - planning isn't working or its disabled. don't send it
   bool planCarrot(const grid_map_msgs::GridMap& message,
@@ -82,7 +81,7 @@ class NavigationDemo
   ros::Subscriber subscriber_;
 
   //! Grid map publisher.
-  ros::Publisher outputGridmapPub_, footstepPlanRequestPub_, raysPub_;
+  ros::Publisher outputGridmapPub_, footstepPlanRequestPub_, ray1pub_, ray2pub_;
 
   //! Command publisher.
   ros::Publisher actionPub_;

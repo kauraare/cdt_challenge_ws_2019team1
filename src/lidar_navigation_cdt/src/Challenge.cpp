@@ -57,7 +57,8 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
 
   outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 1, true);
   footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
-  raysPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/rays", 10);
+  ray1pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray1", 10);
+  ray2pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray2", 10);
 
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
 
@@ -164,27 +165,33 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 
 }
 
-float scanForObstacle(Position start, float orientation, float angle, GridMap map, float &x, float &y) {
+float scanForObstacle(Position robot, float orientation, float angle, GridMap map, float &x, float &y) {
 
   float distance = 10;
   float threshold = 0.7;
 
   float theta = (orientation+angle);
-  Position direction(distance*cos(theta), distance*sin(theta));
+  Position ray_end(distance*cos(theta), distance*sin(theta));
+  ray_end += robot;
 
-  Position start_direction(.6*cos(theta), .6*sin(theta));
+  Position ray_start(.6*cos(theta), .6*sin(theta));
+  ray_start += robot;
 
-  for (grid_map::LineIterator iterator(map, start_direction, direction); !iterator.isPastEnd(); ++iterator) {
+  for (grid_map::LineIterator iterator(map, ray_start, ray_end); !iterator.isPastEnd(); ++iterator) {
     Position position;
     map.getPosition(*iterator, position);
     float val = map.at("traversability_clean_dilated", *iterator);
     x = position.x();
     y = position.y();
     if (val < threshold) {
-      std::cout << start_direction.x() << " " << start_direction.y() << " " << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
-      return (position - start).norm();
+      //std::cout << start_direction.x() << " " << start_direction.y() << " " << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
+      return (position - robot).norm();
     }
   }
+}
+
+Eigen::Isometry3d createVector(Position origin, float theta, float magnitude) {
+
 }
 
 bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
@@ -378,15 +385,24 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
       max_y = y;
       max_distance = res;
     }
-    //if (cnt++ == 50 ){
-    //  break;
-    //}
   }
+/*
+  geometry_msgs::PoseStamped m1, m2;
+  float theta1 = robot_yaw+(-N/2.0)*PI/180.0;
+  float theta2 = robot_yaw+(N/2.0)*PI/180.0;
+  Position direction(distance*cos(theta), distance*sin(theta));
+
+  m1.header = message.info.header;
+  tf::poseEigenToMsg (pose_chosen_carrot, m1.pose);
+  ray1pub_.publish(m1);
+
+  m1.header = message.info.header;
+  tf::poseEigenToMsg (pose_chosen_carrot, m1.pose);
+  ray1pub_.publish(m1);
 
   std::cout << "DISTANCE " << max_distance << std::endl;
-
-  std::cout << "REPLACE FAKE CARROT!\n";
   pose_chosen_carrot.translation() = Eigen::Vector3d(max_x, max_y, 0);
+*/
 
 /*
 
