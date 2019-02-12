@@ -169,7 +169,7 @@ float scanForObstacle(Position start, float orientation, float angle, GridMap ma
   float distance = 10;
   float threshold = 0.7;
 
-  float theta = (orientation+angle)/180.*PI;
+  float theta = (orientation+angle);
   Position direction(distance*cos(theta), distance*sin(theta));
 
   Position start_direction(.6*cos(theta), .6*sin(theta));
@@ -369,6 +369,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   int k = 0;
   for (int i=0; i<N; i++) {
     float angle = i-N/2.0;
+    angle = angle * PI / 180;
     float x, y;
     float res = scanForObstacle(pos_robot, robot_yaw, -angle, outputMap, x, y);
     if (res > max_distance) {
