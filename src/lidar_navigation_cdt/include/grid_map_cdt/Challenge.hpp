@@ -82,7 +82,7 @@ class NavigationDemo
   ros::Subscriber subscriber_;
 
   //! Grid map publisher.
-  ros::Publisher outputGridmapPub_, footstepPlanRequestPub_;
+  ros::Publisher outputGridmapPub_, footstepPlanRequestPub_, raysPub_;
 
   //! Command publisher.
   ros::Publisher actionPub_;

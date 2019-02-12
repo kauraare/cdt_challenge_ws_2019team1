@@ -57,7 +57,6 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
 
   outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 1, true);
   footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
-
   raysPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/rays", 10);
 
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
@@ -68,7 +67,7 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
     success = false;
     return;
   }
-  
+
   success = true;
 
   verbose_ = false;
@@ -81,7 +80,7 @@ NavigationDemo::~NavigationDemo()
 {
 }
 
-
+int cnt = 0;
 bool NavigationDemo::readParameters()
 {
   if (!nodeHandle_.getParam("input_topic", inputTopic_)) {
@@ -89,7 +88,7 @@ bool NavigationDemo::readParameters()
     return false;
   }
   nodeHandle_.param("filter_chain_parameter_name", filterChainParametersName_, std::string("grid_map_filters"));
-  
+
   nodeHandle_.param("demo_mode", demoMode_, true);
   if (demoMode_)
     ROS_INFO("In demo mode [%d]. will use a hard coded gridmap bag and robot pose", int(demoMode_) );
@@ -108,7 +107,7 @@ std::chrono::duration<double> NavigationDemo::toc(){
   auto nowTime = high_resolution_clock::now();
   duration<double> elapsedTime = duration_cast<milliseconds>(nowTime - lastTime_);
   lastTime_ = nowTime;
-  // std::cout << elapsedTime.count() << "ms elapsed" << std::endl;    
+  // std::cout << elapsedTime.count() << "ms elapsed" << std::endl;
   return elapsedTime;
 }
 
@@ -169,15 +168,15 @@ float scanForObstacle(Position start, float orientation, float angle, GridMap ma
 
   float distance = 10;
   float threshold = 0.7;
- 
+
   float theta = (orientation+angle)/180.*PI;
   Position direction(distance*cos(theta), distance*sin(theta));
 
   Position start_direction(.6*cos(theta), .6*sin(theta));
-  
+
   for (grid_map::LineIterator iterator(map, start_direction, direction); !iterator.isPastEnd(); ++iterator) {
     Position position;
-    map.getPosition(*iterator, position);    
+    map.getPosition(*iterator, position);
     float val = map.at("traversability_clean_dilated", *iterator);
     x = position.x();
     y = position.y();
@@ -185,7 +184,7 @@ float scanForObstacle(Position start, float orientation, float angle, GridMap ma
       std::cout << start_direction.x() << " " << start_direction.y() << " " << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
       return (position - start).norm();
     }
-  }  
+  }
 }
 
 bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
@@ -258,16 +257,16 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
   // Convert to OpenCV image, erode, convert back.
   cv::Mat originalImage, erodeImage, thresholdedImage;
-  
+
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
   int erosion_size = 10;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
-  
+
   cv::erode(originalImage, erodeImage, erosion_specs);
-  //cv::threshold(erodeImage, thresholdedImage, 0.99, 1.0, cv::THRESH_BINARY);  
+  //cv::threshold(erodeImage, thresholdedImage, 0.99, 1.0, cv::THRESH_BINARY);
 
   GridMapCvConverter::addLayerFromImage<unsigned short, 1>(erodeImage, "traversability_clean_dilated", outputMap, minValue, maxValue);
 
@@ -342,11 +341,11 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   if (verboseTimer_) std::cout << toc().count() << "ms: publish output\n";
 
   std::cout << "finish - carrot planner\n\n";
-  
+
 
   // REMOVE THIS WHEN YOUR ARE DEVELOPING ----------------
   // create a fake carrot - replace with a good carrot
-  
+
 /*
   Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
     double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
@@ -356,7 +355,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
-  
+
 */
 
   Eigen::Quaterniond q(pose_robot.rotation());
@@ -369,7 +368,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   float max_x, max_y;
   int k = 0;
   for (int i=0; i<N; i++) {
-    float angle = 10;//i-N/2.0;
+    float angle = i-N/2.0;
     float x, y;
     float res = scanForObstacle(pos_robot, robot_yaw, -angle, outputMap, x, y);
     if (res > max_distance) {
@@ -378,8 +377,9 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
       max_y = y;
       max_distance = res;
     }
-
-    break;
+    //if (cnt++ == 50 ){
+    //  break;
+    //}
   }
 
   std::cout << "DISTANCE " << max_distance << std::endl;
@@ -403,9 +403,12 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
     if (verbose_) std::cout << carrot_relative_pose.transpose() << " - relative carrot\n";
     if (verbose_) std::cout << carrot_relative_theta << " - relative carrot - theta\n";
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(carrot_relative_theta, Eigen::Vector3d::UnitZ()) // yaw
+
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(robot_yaw+carrot_relative_theta, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
+
+  pose_chosen_carrot.rotate(motion_R);
 
   // REMOVE THIS -----------------------------------------
 
