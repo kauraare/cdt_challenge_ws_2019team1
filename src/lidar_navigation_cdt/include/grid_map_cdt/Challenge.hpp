@@ -21,6 +21,12 @@
 #include <std_msgs/Int16.h>
 
 
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseArray.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Int16.h>
+
 #include <tf/transform_listener.h>
 
 namespace grid_map_demos {
@@ -57,6 +63,8 @@ class NavigationDemo
    */
   void callback(const grid_map_msgs::GridMap& message);
 
+  void newDrivingGoalRvizHandler(const geometry_msgs::PoseStampedConstPtr& msg);
+
   // true - planning is good. send carrot.
   // false - planning isn't working or its disabled. don't send it
   bool planCarrot(const grid_map_msgs::GridMap& message,
@@ -78,7 +86,7 @@ class NavigationDemo
   std::string outputTopic_;
 
   //! Grid map subscriber
-  ros::Subscriber subscriber_;
+  ros::Subscriber subscriber_, drivingRvizSub_;
 
   //! Grid map publisher.
   ros::Publisher outputGridmapPub_, footstepPlanRequestPub_, ray1pub_, ray2pub_;
