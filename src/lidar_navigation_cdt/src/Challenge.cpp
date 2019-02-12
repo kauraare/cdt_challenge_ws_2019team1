@@ -56,11 +56,16 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
   listener_ = new tf::TransformListener();
 
   outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 1, true);
-  footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
+  if (demoMode_) {
+    footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
+  }  
   ray1pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray1", 10);
   ray2pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray2", 10);
 
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
+
+  drivingRvizSub_  = nodeHandle_.subscribe(std::string("/move_base_simple/goal"), 100, &NavigationDemo::newDrivingGoalRvizHandler, this);
+
 
   // Setup filter chain.
   if (!filterChain_.configure(filterChainParametersName_, nodeHandle)) {
@@ -112,6 +117,33 @@ std::chrono::duration<double> NavigationDemo::toc(){
   return elapsedTime;
 }
 
+grid_map_msgs::GridMap map_msg;
+void NavigationDemo::newDrivingGoalRvizHandler(const geometry_msgs::PoseStampedConstPtr& msg){
+
+  // The all important position goal - get the robot there
+  Position pos_goal(8.5,4.0);
+
+  std::cout << "YOW YOWYOWO " << std::endl;
+  Eigen::Isometry3d pose_robot = Eigen::Isometry3d::Identity();
+  tf::poseMsgToEigen(msg->pose, pose_robot);
+
+  geometry_msgs::PoseStamped m;
+  m.header = map_msg.info.header;
+  tf::poseEigenToMsg (pose_robot, m.pose);
+  ray1pub_.publish(m);
+  
+  Eigen::Isometry3d pose_chosen_carrot = Eigen::Isometry3d::Identity();
+  bool sendCommand = planCarrot(map_msg, pose_robot, pos_goal, pose_chosen_carrot);
+
+  if(sendCommand){
+    // Send the carrot to the position controller
+    geometry_msgs::PoseStamped m;
+    m.header = map_msg.info.header;
+    tf::poseEigenToMsg (pose_chosen_carrot, m.pose);
+    footstepPlanRequestPub_.publish(m);
+  }
+}
+
 
 void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 {
@@ -120,13 +152,16 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
     return;
   }
 
+  map_msg = message;
+
   // The all important position goal - get the robot there
   Position pos_goal(8.5,4.0);
 
   Eigen::Isometry3d pose_robot = Eigen::Isometry3d::Identity();
   if(demoMode_){ // demoMode
-
-    Eigen::Vector3d robot_xyz = Eigen::Vector3d(0.0,0.0,0); //rpy
+    
+    Eigen::Vector3d robot_xyz = Eigen::Vector3d(4.0,4.0,0); //rpy
+    //Eigen::Vector3d robot_xyz = Eigen::Vector3d(3.0,3.0,0); //rpy
     Eigen::Vector3d robot_rpy = Eigen::Vector3d(0,0,0); //rpy
 
     pose_robot.setIdentity();
@@ -136,6 +171,12 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
         * Eigen::AngleAxisd(robot_rpy(0), Eigen::Vector3d::UnitX()); // order is ypr
 
     pose_robot.rotate( motion_R );
+
+    geometry_msgs::PoseStamped m;
+    m.header = message.info.header;
+    tf::poseEigenToMsg (pose_robot, m.pose);
+    ray1pub_.publish(m);
+
 
   }else{ // online
 
@@ -147,8 +188,7 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
         ROS_ERROR("%s",ex.what());
     }
 
-    tf::transformTFToEigen (transform, pose_robot);
-    if (verbose_) std::cout << pose_robot.translation().transpose() << " current pose_robot\n";
+    tf::transformTFToEigen (transform, pose_robot);    
   }
 
 
@@ -165,16 +205,16 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 
 }
 
-float scanForObstacle(Position robot, float orientation, float angle, GridMap map, float &x, float &y) {
+// angle should be in global reference angles
+float scanForObstacle(Position robot, float theta, GridMap map, float &x, float &y) {
 
   float distance = 10;
-  float threshold = 0.7;
+  float threshold = 0.85;
 
-  float theta = (orientation+angle);
   Position ray_end(distance*cos(theta), distance*sin(theta));
   ray_end += robot;
 
-  Position ray_start(.6*cos(theta), .6*sin(theta));
+  Position ray_start(.4*cos(theta), .4*sin(theta));
   ray_start += robot;
 
   for (grid_map::LineIterator iterator(map, ray_start, ray_end); !iterator.isPastEnd(); ++iterator) {
@@ -264,7 +304,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
-  int erosion_size = 20;
+  int erosion_size = 25;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
 
@@ -366,7 +406,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   quat_to_euler(q, robot_roll, robot_pitch, robot_yaw);
 
   // rotates counter-clockwise the pose_robot
-  int N = 100;
+  int N = 140;
   float max_distance = 0;
   float max_x, max_y;
   float new_carrot_theta = 0;
@@ -375,9 +415,8 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     float angle = i-N/2.0;
     angle = angle * PI / 180;
     float x, y;
-    float res = scanForObstacle(pos_robot, robot_yaw, -angle, outputMap, x, y);
+    float res = scanForObstacle(pos_robot, robot_yaw -angle, outputMap, x, y);
     if (res > max_distance) {
-      std::cout << angle << " " << res << " " << x << " " << y << std::endl;
       max_x = x;
       max_y = y;
       new_carrot_theta = -angle;
@@ -387,16 +426,16 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
   // check also for the goal ray
   std::cout << " ROBOT " << pos_robot.x() << " " << pos_robot.y() << std::endl;
-  double goal_yaw = atan2(pos_goal.y()-max_y, pos_goal.x()-max_x)-robot_yaw;
-  float angle = goal_yaw;
+  double goal_yaw = atan2(pos_goal.y()-pos_robot.y(), pos_goal.x()-pos_robot.x());  
   float x, y;
-  float res = scanForObstacle(pos_robot, robot_yaw, angle, outputMap, x, y);
-  std::cout << "GOAL " <<  angle << " " << res << " " << x << " " << y << std::endl;
+  float res = scanForObstacle(pos_robot,  -goal_yaw, outputMap, x, y);
+  std::cout << " TO GOAL " << res << std::endl; 
 
-  if (res > 0) {
+  // if it looks the either way around, fuck off and turn back
+  if (res > 0.84 || res > max_distance) {
     max_x = x;
     max_y = y;
-    new_carrot_theta = angle;
+    new_carrot_theta = goal_yaw - robot_yaw;
     max_distance = res;
   }
 
