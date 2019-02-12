@@ -55,10 +55,8 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
   subscriber_ = nodeHandle_.subscribe(inputTopic_, 1, &NavigationDemo::callback, this);
   listener_ = new tf::TransformListener();
 
-  outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 1, true);
+  outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 10, true);
   footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
-  ray1pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray1", 10);
-  ray2pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray2", 10);
 
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
 
@@ -168,7 +166,7 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 float scanForObstacle(Position robot, float orientation, float angle, GridMap map, float &x, float &y) {
 
   float distance = 10;
-  float threshold = 0.7;
+  float threshold = 0.8;
 
   float theta = (orientation+angle);
   Position ray_end(distance*cos(theta), distance*sin(theta));
@@ -264,7 +262,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
-  int erosion_size = 15;
+  int erosion_size = 20;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
 
@@ -284,57 +282,6 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     //std::cout << position.x() << " " << position.y() << " : " << outputMap.at("traversability_clean_dilated", *iterator) << std::endl;
   }
 
-/*
-  Position difference = pos_goal - pos_robot;
-  double difference_value = difference.norm();
-  Index pt_index;
-  bool placed_carrot = false;
-  // Check whether goal is within grid map.
-  if ( outputMap.isInside(pos_goal) ){
-    // TODO: this is assuming that the number is in meters.
-    if (difference_value < 1) {
-      // If we're close to the goal, set the carrot there.
-      outputMap.getIndex(pos_goal, pt_index );
-      Position pt_cell;
-      outputMap.getPosition(pt_index, pt_cell);
-      outputMap.at("carrots", pt_index) = 1.0;
-      placed_carrot = true;
-    }
-  }
-
-  if (!placed_carrot) {
-    Position optimistic_carrot;
-    optimistic_carrot = pos_robot + difference/difference_value;
-
-    if ( outputMap.isInside(pos_goal) ){
-      // TODO: this is assuming that the number is in meters.
-      if (difference_value < 1) {
-        // If we're close to the goal, set the carrot there.
-        outputMap.getIndex(pos_goal, pt_index );
-        Position pt_cell;
-        outputMap.getPosition(pt_index, pt_cell);
-        outputMap.at("carrots", pt_index) = 1.0;
-        placed_carrot = true;
-      }
-    }
-  }
-*/
-
-  /*
-  // Else, project it somewhere.
-  {
-    Position difference = pos_goal - pos_robot;
-    double difference_value = difference.norm();
-    double alpha = 0.1;
-    for(int counter = 0; counter < difference_value/alpha; counter++) {;}
-  }*/
-
-
-  //outputMap.at("carrots", pt_index) = 1.0;
-
-  ////// Put your code here ////////////////////////////////////
-
-
 
   // Publish filtered output grid map.
   grid_map_msgs::GridMap outputMessage;
@@ -344,22 +291,6 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   if (verboseTimer_) std::cout << toc().count() << "ms: publish output\n";
 
   std::cout << "finish - carrot planner\n\n";
-
-
-  // REMOVE THIS WHEN YOUR ARE DEVELOPING ----------------
-  // create a fake carrot - replace with a good carrot
-
-/*
-  Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
-    double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
-    if (verbose_) std::cout << carrot_relative_pose.transpose() << " - relative carrot\n";
-    if (verbose_) std::cout << carrot_relative_theta << " - relative carrot - theta\n";
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(carrot_relative_theta, Eigen::Vector3d::UnitZ()) // yaw
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
-
-
-*/
 
   Eigen::Quaterniond q(pose_robot.rotation());
   double robot_roll, robot_pitch, robot_yaw;
@@ -376,8 +307,9 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     angle = angle * PI / 180;
     float x, y;
     float res = scanForObstacle(pos_robot, robot_yaw, -angle, outputMap, x, y);
-    if (res > max_distance) {
-      std::cout << angle << " " << res << " " << x << " " << y << std::endl;
+
+    // pick maximum distant ray and break ties with the angle
+    if (res >= max_distance) {
       max_x = x;
       max_y = y;
       new_carrot_theta = -angle;
@@ -385,35 +317,8 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     }
   }
 
-/*
-  geometry_msgs::PoseStamped m1, m2;
-  float theta1 = robot_yaw+(-N/2.0)*PI/180.0;
-  float theta2 = robot_yaw+(N/2.0)*PI/180.0;
-  Position direction(distance*cos(theta), distance*sin(theta));
-
-  m1.header = message.info.header;
-  tf::poseEigenToMsg (pose_chosen_carrot, m1.pose);
-  ray1pub_.publish(m1);
-
-  m1.header = message.info.header;
-  tf::poseEigenToMsg (pose_chosen_carrot, m1.pose);
-  ray1pub_.publish(m1);
-
-  std::cout << "DISTANCE " << max_distance << std::endl;
-
-*/
-
-/*
-
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(1.0, Eigen::Vector3d::UnitZ()) // yaw
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
-
-  pose_chosen_carrot.rotate(Eigen::AngleAxisd(robot_yaw - 20/180.*PI, Eigen::Vector3d::UnitZ()) // yaw
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX())
-  );
-  */
+  Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
+  double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
 
   Eigen::Quaterniond motion_R = Eigen::AngleAxisd(robot_yaw+new_carrot_theta, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
