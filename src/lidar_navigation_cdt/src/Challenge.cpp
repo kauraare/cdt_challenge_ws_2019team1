@@ -320,7 +320,13 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
   double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
 
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(robot_yaw+new_carrot_theta, Eigen::Vector3d::UnitZ()) // yaw
+  //
+  double new_carrot_to_goal_theta = atan2(max_y, max_x) - atan2(pos_goal.y(), pos_goal.x());
+
+  //
+  float ray_angle = -new_carrot_theta;
+  float goal_angle = -new_carrot_to_goal_theta;
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(goal_angle, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
