@@ -264,7 +264,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
-  int erosion_size = 15;
+  int erosion_size = 20;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
 
