@@ -385,42 +385,31 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     }
   }
 
-/*
-  geometry_msgs::PoseStamped m1, m2;
-  float theta1 = robot_yaw+(-N/2.0)*PI/180.0;
-  float theta2 = robot_yaw+(N/2.0)*PI/180.0;
-  Position direction(distance*cos(theta), distance*sin(theta));
+  // check also for the goal ray
+  std::cout << " ROBOT " << pos_robot.x() << " " << pos_robot.y() << std::endl;
+  double goal_yaw = atan2(pos_goal.y()-max_y, pos_goal.x()-max_x)-robot_yaw;
+  float angle = goal_yaw;
+  float x, y;
+  float res = scanForObstacle(pos_robot, robot_yaw, angle, outputMap, x, y);
+  std::cout << "GOAL " <<  angle << " " << res << " " << x << " " << y << std::endl;
 
-  m1.header = message.info.header;
-  tf::poseEigenToMsg (pose_chosen_carrot, m1.pose);
-  ray1pub_.publish(m1);
+  if (res > 0) {
+    max_x = x;
+    max_y = y;
+    new_carrot_theta = angle;
+    max_distance = res;
+  }
 
-  m1.header = message.info.header;
-  tf::poseEigenToMsg (pose_chosen_carrot, m1.pose);
-  ray1pub_.publish(m1);
+  float carrot_angle = robot_yaw+new_carrot_theta;
 
-  std::cout << "DISTANCE " << max_distance << std::endl;
-
-*/
-
-/*
-
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(1.0, Eigen::Vector3d::UnitZ()) // yaw
+  //Eigen::Quaterniond motion_R = Eigen::AngleAxisd(robot_yaw+new_carrot_theta, Eigen::Vector3d::UnitZ()) // yaw
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(carrot_angle, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
-  pose_chosen_carrot.rotate(Eigen::AngleAxisd(robot_yaw - 20/180.*PI, Eigen::Vector3d::UnitZ()) // yaw
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX())
-  );
-  */
-
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(robot_yaw+new_carrot_theta, Eigen::Vector3d::UnitZ()) // yaw
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
-        * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
-
-  pose_chosen_carrot.rotate(motion_R);
   pose_chosen_carrot.translation() = Eigen::Vector3d(max_x, max_y, 0);
+  pose_chosen_carrot.rotate(motion_R);
+
   // REMOVE THIS -----------------------------------------
 
   return true;
