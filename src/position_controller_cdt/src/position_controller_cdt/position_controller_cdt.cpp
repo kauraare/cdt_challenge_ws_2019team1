@@ -25,21 +25,28 @@ double PositionController::constrainAngle(double x){
 }
 
 Eigen::Vector3d PositionController::constrainPosition(Eigen::Vector3d pos){
-    //we need more copypaste here, I believe
-    double threshold = 3.0;
-    if(pos[0] > threshold) {
-	pos[0] = threshold;
-    }
-    if(pos[1] > threshold) {
-	pos[1] = threshold;
-    }
-    if(pos[0] < -threshold) {
-	pos[0] = -threshold;
-    }
-    if(pos[1] < -threshold) {
-	pos[1] = -threshold;
-    }
-    return pos;
+//we need more copypaste here, I believe
+double threshold_max = 3.0;
+double threshold_min = 0.5;
+if(pos[0] > threshold_max) {
+pos[0] = threshold_max;
+}
+if(pos[1] > threshold_max) {
+pos[1] = threshold_max;
+}
+if(pos[0] < -threshold_max) {
+pos[0] = -threshold_max;
+}
+if(pos[1] < -threshold_max) {
+pos[1] = -threshold_max;
+}
+if(pos[0] < threshold_min && pos[0] > -threshold_min) {
+pos[0] = 0;
+}
+if(pos[1] < threshold_min && pos[1] > -threshold_min) {
+pos[1] = 0;
+}
+return pos;
 }
 
 FOLLOWER_OUTPUT PositionController::computeControlCommand(Eigen::Isometry3d current_pose, int64_t current_utime){
