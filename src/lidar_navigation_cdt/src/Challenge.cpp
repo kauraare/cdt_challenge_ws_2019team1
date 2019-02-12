@@ -302,12 +302,13 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   float max_x, max_y;
   float new_carrot_theta = 0;
   int k = 0;
+  double current_goal_angle = robot_yaw - atan2(pos_goal.y()-pos_robot.y(), pos_goal.x()-pos_robot.x()) ;
   for (int i=0; i<N; i++) {
     float angle = i-N/2.0;
     angle = angle * PI / 180;
     float x, y;
     float res = scanForObstacle(pos_robot, robot_yaw, -angle, outputMap, x, y);
-
+    res = res * exp(-pow(angle - current_goal_angle),2)/current_dist_to_goal) ;
     // pick maximum distant ray and break ties with the angle
     if (res >= max_distance) {
       max_x = x;
