@@ -264,7 +264,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   GridMapCvConverter::toImage<unsigned short, 1>(outputMap, "traversability_clean", CV_16UC1, minValue, maxValue, originalImage);
   //cv::imwrite( "originalImage.bmp", originalImage );
   // Specify dilation type.
-  int erosion_size = 10;
+  int erosion_size = 15;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
                                                       cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
 
@@ -369,6 +369,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   int N = 100;
   float max_distance = 0;
   float max_x, max_y;
+  float new_carrot_theta = 0;
   int k = 0;
   for (int i=0; i<N; i++) {
     float angle = i-N/2.0;
@@ -379,6 +380,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
       std::cout << angle << " " << res << " " << x << " " << y << std::endl;
       max_x = x;
       max_y = y;
+      new_carrot_theta = -angle;
       max_distance = res;
     }
   }
@@ -413,12 +415,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   );
   */
 
-  Eigen::Vector4d carrot_relative_pose = pose_robot.matrix().inverse()*Eigen::Vector4d(pos_goal(0), pos_goal(1), 0, 1) ;
-    double carrot_relative_theta = atan2(carrot_relative_pose(1),carrot_relative_pose(0));
-    if (verbose_) std::cout << carrot_relative_pose.transpose() << " - relative carrot\n";
-    if (verbose_) std::cout << carrot_relative_theta << " - relative carrot - theta\n";
-
-  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(robot_yaw+carrot_relative_theta, Eigen::Vector3d::UnitZ()) // yaw
+  Eigen::Quaterniond motion_R = Eigen::AngleAxisd(robot_yaw+new_carrot_theta, Eigen::Vector3d::UnitZ()) // yaw
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) // pitch
         * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()); // roll
 
