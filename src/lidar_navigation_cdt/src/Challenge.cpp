@@ -121,7 +121,7 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
   }
 
   // The all important position goal - get the robot there
-  Position pos_goal(8.5,4.0);
+  Position pos_goal(14.5, 4.0);
 
   Eigen::Isometry3d pose_robot = Eigen::Isometry3d::Identity();
   if(demoMode_){ // demoMode
