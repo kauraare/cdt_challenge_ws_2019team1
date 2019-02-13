@@ -59,10 +59,9 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
   subscriber_ = nodeHandle_.subscribe(inputTopic_, 1, &NavigationDemo::callback, this);
   listener_ = new tf::TransformListener();
 
-  outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 10, true);
-  footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
+  outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 30, true);
+  footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 30);
   ray1pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray1", 10);
-  ray2pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray2", 10);
 
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
 
@@ -262,7 +261,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   outputMap.add("carrots", Matrix::Zero(outputMap.getSize()(0), outputMap.getSize()(1)));
 
   // clean traversability_clean around robot
-  for (grid_map::CircleIterator iterator(outputMap, pos_robot, 0.7); !iterator.isPastEnd(); ++iterator) {
+  for (grid_map::CircleIterator iterator(outputMap, pos_robot, 0.4); !iterator.isPastEnd(); ++iterator) {
     outputMap.at("traversability_clean", *iterator) = 1.0f;
   }
 
@@ -380,19 +379,25 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   float max_x, max_y;
   float new_carrot_theta = 0;
   int k = 0;
+
   float max_angle_to_goal = -1;
+  double current_goal_angle = robot_yaw - atan2(pos_goal.y()-pos_robot.y(), pos_goal.x()-pos_robot.x()) ;
+
   for (int i=0; i<N; i++) {
     float angle = i-N/2.0;
     angle = angle * PI / 180;
     float x, y;
+
     float res = scanForObstacle(pos_robot, robot_yaw -angle, outputMap, x, y);
 
     // give me the cosine yowwwwww
     float angle_to_goal = fabs(goal_yaw - robot_yaw + angle);
     std::cout << "Angle difference " << angle_to_goal << std::endl;
 
-    if (res > max_distance) {// || (res == max_distance && angle_to_goal < max_angle_to_goal)) {
-      std::cout << angle << " " << res << " " << x << " " << y << std::endl;
+    res = res * exp(-pow(angle - current_goal_angle,2)/current_dist_to_goal) ;
+    // pick maximum distant ray and break ties with the angle
+    if (res >= max_distance) {
+
       max_x = x;
       max_y = y;
       new_carrot_theta = -angle;
@@ -404,8 +409,8 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   // check also for the goal ray
   //std::cout << " ROBOT " << pos_robot.x() << " " << pos_robot.y() << std::endl;
 
-  float x, y;
-  float res = scanForObstacle(pos_robot,  -goal_yaw, outputMap, x, y);
+  //float x, y;
+  //float res = scanForObstacle(pos_robot,  -goal_yaw, outputMap, x, y);
   //std::cout << " TO GOAL " << res << std::endl;
 
   // if it looks the either way around, fuck off and turn back
@@ -454,7 +459,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
   pose_chosen_carrot.rotate(motion_R);
 
-  float p = 0.8;
+  float p = 0.9;
 
 
   pose_chosen_carrot.translation() = Eigen::Vector3d(max_x*p+(1-p)*pos_robot.x(), max_y*p+(1-p)*pos_robot.y(), 0);
