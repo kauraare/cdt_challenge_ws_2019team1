@@ -59,9 +59,9 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
   subscriber_ = nodeHandle_.subscribe(inputTopic_, 1, &NavigationDemo::callback, this);
   listener_ = new tf::TransformListener();
 
-  outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 30, true);
-  footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 30);
-  ray1pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray1", 10);
+  outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 10, true);
+  footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
+  //ray1pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray1", 10);
 
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
 
@@ -169,9 +169,9 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 }
 
 // angle should be in global reference angles
-float scanForObstacle(Position robot, float theta, GridMap map, float &x, float &y) {
+float scanForObstacle(Position robot, float theta, GridMap map, Position goal_position, float &x, float &y) {
 
-  float distance = 5;
+  float distance = 10;
   float threshold = 0.75;
 
   Position ray_end(distance*cos(theta), distance*sin(theta));
@@ -188,7 +188,7 @@ float scanForObstacle(Position robot, float theta, GridMap map, float &x, float 
     y = position.y();
     if (val < threshold) {
       //std::cout << start_direction.x() << " " << start_direction.y() << " " << position.x() << " " << position.y() << " : " << map.at("traversability_clean_dilated", *iterator) << std::endl;
-      return (position - robot).norm();
+      return  (position - robot).norm();
     }
   }
 }
@@ -273,7 +273,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   // Specify dilation type.
   int erosion_size = 20;
   cv::Mat erosion_specs = cv::getStructuringElement( cv::MORPH_ELLIPSE,
-                                                      cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ));
+                                                      cv::Size( 1.5*erosion_size + 1, 2*erosion_size+1 ));
 
   cv::erode(originalImage, erodeImage, erosion_specs);
   //cv::threshold(erodeImage, thresholdedImage, 0.99, 1.0, cv::THRESH_BINARY);
@@ -388,13 +388,12 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     angle = angle * PI / 180;
     float x, y;
 
-    float res = scanForObstacle(pos_robot, robot_yaw -angle, outputMap, x, y);
+    float res = scanForObstacle(pos_robot, robot_yaw -angle, outputMap, pos_goal, x, y);
 
     // give me the cosine yowwwwww
     float angle_to_goal = fabs(goal_yaw - robot_yaw + angle);
-    std::cout << "Angle difference " << angle_to_goal << std::endl;
 
-    res = res * exp(-pow(angle - current_goal_angle,2)/(current_dist_to_goal*0.7)) ;
+    res = res * exp(-pow(angle - current_goal_angle, 2)/(current_dist_to_goal*0.85)) ;
     // pick maximum distant ray and break ties with the angle
     if (res >= max_distance) {
 
