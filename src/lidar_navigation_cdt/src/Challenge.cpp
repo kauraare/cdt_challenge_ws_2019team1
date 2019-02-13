@@ -375,7 +375,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
   quat_to_euler(q, robot_roll, robot_pitch, robot_yaw);
 
   // rotates counter-clockwise the pose_robot
-  int N = 140;
+  int N = 180;
   float max_distance = 0;
   float max_x, max_y;
   float new_carrot_theta = 0;
