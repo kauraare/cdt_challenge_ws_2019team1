@@ -56,16 +56,16 @@ NavigationDemo::NavigationDemo(ros::NodeHandle& nodeHandle, bool& success)
   listener_ = new tf::TransformListener();
 
   outputGridmapPub_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("/filtered_map", 1, true);
-  if (demoMode_) {
-    footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
-  }  
+  footstepPlanRequestPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/footstep_plan_request", 10);
+
   ray1pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray1", 10);
   ray2pub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/ray2", 10);
 
   actionPub_ = nodeHandle_.advertise<std_msgs::Int16>("/action_cmd", 10);
 
-  drivingRvizSub_  = nodeHandle_.subscribe(std::string("/move_base_simple/goal"), 100, &NavigationDemo::newDrivingGoalRvizHandler, this);
-
+  if (demoMode_) {
+    drivingRvizSub_  = nodeHandle_.subscribe(std::string("/move_base_simple/goal"), 100, &NavigationDemo::newDrivingGoalRvizHandler, this);
+  }
 
   // Setup filter chain.
   if (!filterChain_.configure(filterChainParametersName_, nodeHandle)) {
@@ -131,7 +131,7 @@ void NavigationDemo::newDrivingGoalRvizHandler(const geometry_msgs::PoseStampedC
   m.header = map_msg.info.header;
   tf::poseEigenToMsg (pose_robot, m.pose);
   ray1pub_.publish(m);
-  
+
   Eigen::Isometry3d pose_chosen_carrot = Eigen::Isometry3d::Identity();
   bool sendCommand = planCarrot(map_msg, pose_robot, pos_goal, pose_chosen_carrot);
 
@@ -159,7 +159,7 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 
   Eigen::Isometry3d pose_robot = Eigen::Isometry3d::Identity();
   if(demoMode_){ // demoMode
-    
+
     Eigen::Vector3d robot_xyz = Eigen::Vector3d(4.0,4.0,0); //rpy
     //Eigen::Vector3d robot_xyz = Eigen::Vector3d(3.0,3.0,0); //rpy
     Eigen::Vector3d robot_rpy = Eigen::Vector3d(0,0,0); //rpy
@@ -188,7 +188,7 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
         ROS_ERROR("%s",ex.what());
     }
 
-    tf::transformTFToEigen (transform, pose_robot);    
+    tf::transformTFToEigen (transform, pose_robot);
   }
 
 
@@ -426,10 +426,10 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
 
   // check also for the goal ray
   std::cout << " ROBOT " << pos_robot.x() << " " << pos_robot.y() << std::endl;
-  double goal_yaw = atan2(pos_goal.y()-pos_robot.y(), pos_goal.x()-pos_robot.x());  
+  double goal_yaw = atan2(pos_goal.y()-pos_robot.y(), pos_goal.x()-pos_robot.x());
   float x, y;
   float res = scanForObstacle(pos_robot,  -goal_yaw, outputMap, x, y);
-  std::cout << " TO GOAL " << res << std::endl; 
+  std::cout << " TO GOAL " << res << std::endl;
 
   // if it looks the either way around, fuck off and turn back
   if (res > 0.84 || res > max_distance) {
