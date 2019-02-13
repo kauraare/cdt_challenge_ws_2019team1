@@ -171,7 +171,7 @@ void NavigationDemo::callback(const grid_map_msgs::GridMap& message)
 // angle should be in global reference angles
 float scanForObstacle(Position robot, float theta, GridMap map, float &x, float &y) {
 
-  float distance = 10;
+  float distance = 5;
   float threshold = 0.75;
 
   Position ray_end(distance*cos(theta), distance*sin(theta));
@@ -394,7 +394,7 @@ bool NavigationDemo::planCarrot(const grid_map_msgs::GridMap& message,
     float angle_to_goal = fabs(goal_yaw - robot_yaw + angle);
     std::cout << "Angle difference " << angle_to_goal << std::endl;
 
-    res = res * exp(-pow(angle - current_goal_angle,2)/current_dist_to_goal) ;
+    res = res * exp(-pow(angle - current_goal_angle,2)/(current_dist_to_goal*0.7)) ;
     // pick maximum distant ray and break ties with the angle
     if (res >= max_distance) {
 
