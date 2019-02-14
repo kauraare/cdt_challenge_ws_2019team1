@@ -1,0 +1,33 @@
+adapt_coordinates:
+  - transform:
+      source_frame: footprint
+      target_frame: odom
+
+steps:
+ - step:
+    - base_target:
+       target:
+        frame: footprint
+        position: [0.0, 0.0, 0.42]
+        orientation: [0.0, 0.0, 0.6]
+
+ - step:
+    - base_target:
+       target:
+        frame: footprint
+        position: [0.0, 0.0, 0.42]
+        orientation: [0.0, 0.0, -0.3]
+
+ - step:
+    - base_target:
+       target:
+        frame: footprint
+        position: [0.0, 0.0, 0.42]
+        orientation: [0.0, 0.0, 0.3]
+
+ - step:
+    - base_target:
+       target:
+        frame: footprint
+        position: [0.0, 0.0, 0.42]
+        orientation: [0.0, 0.0, 0.0]

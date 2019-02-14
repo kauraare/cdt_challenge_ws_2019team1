@@ -5,3 +5,17 @@ actions:
       file: actions/cdt/celebration.yaml
       type: yaml
       description: Celebrate upon reaching the goal position
+actions:
+  - action:
+      id: jump_big 
+      name: jump_big
+      file: actions/cdt/jump_big.yaml
+      type: yaml
+      description: Celebrate upon reaching the goal position
+actions:
+  - action:
+      id: y 
+      name: yjump_big
+      file: actions/cdt/say_yes.yaml
+      type: yaml
+      description: Celebrate upon reaching the goal position
