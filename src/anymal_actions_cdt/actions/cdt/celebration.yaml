@@ -6,19 +6,17 @@ adapt_coordinates:
 steps:
  - step:
     - base_auto:
-       support_margin: 0.12
 
  - step:
    - joint_trajectory:
       name: RF_LEG
-      ignore_contact: true
       trajectory:
        joint_names: [HAA, HFE, KFE]
        knots:
          - time: 1.5
            positions: [deg(0), deg(145), deg(-245)]
-         - time: 3.0
-           positions: [0.05, 0.8, -1]
+         - time: 5.0
+           positions: [0.05, 0.8, -1.0]
 
 
  - step:
@@ -27,10 +25,25 @@ steps:
  - step:
    - joint_trajectory:
       name: RF_LEG
-      ignore_contact: true
       trajectory:
        joint_names: [HAA, HFE, KFE]
        knots:
-         - time: 3.5
+         - time: 1.5
            positions: [deg(0), deg(145), deg(-245)]
          - time: 5.0
+           positions: [0.05, 0.8, -1.0]
+ - step:
+    - base_auto:
+
+ - step:
+   - joint_trajectory:
+      name: RF_LEG
+      trajectory:
+       joint_names: [HAA, HFE, KFE]
+       knots:
+         - time: 1.5
+           positions: [deg(0), deg(145), deg(-245)]
+         - time: 5.0
+           positions: [0.05, 0.8, -1.0]
+ - step:
+    - base_auto:
