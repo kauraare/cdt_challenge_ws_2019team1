@@ -1,0 +1,15 @@
+steps:
+
+ - step: &step_down
+    - base_auto:
+       height: 0.25
+       average_linear_velocity: 0.35
+ - step: &step_up
+    - base_auto:
+       height: 0.5
+       average_linear_velocity: 0.35
+
+ - step: *step_down
+ - step: *step_up
+ - step: *step_down
+ - step: *step_up
