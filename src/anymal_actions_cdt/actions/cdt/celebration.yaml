@@ -4,41 +4,9 @@ adapt_coordinates:
       target_frame: odom
 
 steps:
-
- # Three legs.
  - step:
     - base_auto:
-       height: 0.45
-       support_margin: 0.09
-
- # Foot motion.
- - step: &step_foot_motion
-    - end_effector_trajectory:
-       name: LF_LEG
-       ignore_contact: true
-       ignore_for_pose_adaptation: true
-       trajectory:
-        frame: footprint
-        knots:
-         - time: 1.0
-           position: [0.2, 0.24, 0.10]
-         - time: 2.0
-           position: [0.6, 0.24, 0.10]
-         - time: 3.0
-           position: [0.32, 0.24, 0.0]
-
- - step:
-    - base_auto:
-    - footstep:
-       name: LF_LEG
-       ignore_contact: false
-       profile_type: straight
-       target:
-        frame: footprint
-        position: [0.32, 0.24, 0.0]
-
- - step:
-   - base_auto:
+       support_margin: 0.12
 
  - step:
    - joint_trajectory:
@@ -47,5 +15,22 @@ steps:
       trajectory:
        joint_names: [HAA, HFE, KFE]
        knots:
-        - time: 1.1
-          positions: [deg(15), deg(-120), deg(-45)]
+         - time: 1.5
+           positions: [deg(0), deg(145), deg(-245)]
+         - time: 3.0
+           positions: [0.05, 0.8, -1]
+
+
+ - step:
+    - base_auto:
+
+ - step:
+   - joint_trajectory:
+      name: RF_LEG
+      ignore_contact: true
+      trajectory:
+       joint_names: [HAA, HFE, KFE]
+       knots:
+         - time: 3.5
+           positions: [deg(0), deg(145), deg(-245)]
+         - time: 5.0
